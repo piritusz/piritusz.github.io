@@ -1,0 +1,85 @@
+:root{
+  --bg:#f6f8fb;--panel:#ffffff;--accent:#0ea5a4;--muted:#6b7280
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:var(--bg);color:#0f172a}
+.trip-nav{background:#fff;padding:10px 18px;border-bottom:1px solid #eef2f7}
+.trip-nav .home-btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;text-decoration:none}
+.hero{background-image:url('images/hero.jpg');background-size:cover;background-position:center;height:220px;display:flex;align-items:flex-end}
+.hero-inner{background:linear-gradient(180deg,rgba(0,0,0,0) 0, rgba(0,0,0,0.45) 60%);color:#fff;padding:28px;width:100%}
+.hero h1{margin:0;font-size:clamp(20px,4vw,36px)}
+.hero .subtitle{opacity:.95;margin-top:6px}
+
+.container{display:flex;gap:20px;padding:20px;max-width:1200px;margin:0 auto;align-items:flex-start}
+
+/* Sliding panel that sits on the very left of the page and scrolls with content
+  It's not fixed so it will scroll together with the page. When closed it
+  translates fully to the left (out of view) except for the ribbon.
+*/
+/* place the panel below the hero so it doesn't block it */
+.filter-panel{--panel-width:360px;width:var(--panel-width);flex-shrink:0;position:fixed;left:calc(22px - var(--panel-width));top:220px;height:calc(100vh - 220px);transition:left .32s ease;z-index:1000}
+
+/* Opened overlay panel slides in from left and overlays content. The body will be prevented from horizontal scroll when open. */
+.filter-panel.open{left:0}
+.filter-panel .ribbon{position:absolute;right:-28px;top:50%;transform:translateY(-50%);background:var(--accent);color:#fff;border:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;z-index:1001}
+.filter-panel .filters{background:#f5efe0;padding:20px;border-radius:0 8px 8px 0;box-shadow:12px 0 36px rgba(2,6,23,.18);border-left:1px solid rgba(0,0,0,.04);height:calc(100vh - 220px);overflow:auto}
+
+.panel-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.35);opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:900}
+.panel-backdrop.visible{opacity:1;pointer-events:auto}
+.filter-panel .field{display:block;margin-bottom:14px}
+.filter-panel .field input[type="text"],
+.filter-panel .field select{width:50%;padding:8px;border-radius:8px;border:1px solid #e6eef6}
+.filter-panel .checkbox-list{display:flex;flex-direction:column;gap:8px;max-height:120px;overflow:auto;padding:6px}
+.filter-panel .checkbox-list label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.filter-panel .checkbox-list input[type="checkbox"]{width:16px;height:16px}
+.range{margin-top:8px}
+.range-values{font-size:0.9rem;color:var(--muted);margin-top:6px}
+.actions{margin-top:8px}
+.btn{background:#111827;color:#fff;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
+
+.filter-panel.open + .content{ /* spacer rule to keep specificity; no visual change */ display:block }
+
+.content{flex:1;display:flex;flex-direction:column}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+.trip-card{background:var(--panel);border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(2,6,23,.06);transition:transform .18s ease, box-shadow .18s ease}
+.trip-card:hover{transform:translateY(-6px) scale(1.01);box-shadow:0 14px 30px rgba(2,6,23,.12)}
+.card-link{display:block;color:inherit;text-decoration:none}
+.card-cover{position:relative;height:260px;background-size:cover;background-position:center}
+.cover-overlay{position:absolute;left:0;right:0;bottom:0;padding:14px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 60%);color:#fff}
+.cover-overlay .trip-title{color:#fff;margin:0;font-size:1.1rem}
+.cover-overlay .trip-meta{color:rgba(255,255,255,0.9);font-size:0.95rem;margin-top:6px}
+.card-body{padding:12px 12px 16px}
+.card-body{padding:12px}
+.trip-title{margin:0 0 6px;font-size:1.05rem}
+.trip-meta{font-size:0.9rem;color:var(--muted);margin-bottom:8px}
+.countries{font-size:0.9rem;color:#0f172a;margin-bottom:8px}
+.countries .country{display:inline-block;background:#eef2f7;padding:6px 8px;border-radius:999px;margin-right:6px;font-size:0.85rem}
+.countries .more{display:inline-block;color:var(--muted);font-weight:600}
+.tags{font-size:0.85rem;color:var(--accent)}
+
+@media (max-width:900px){
+  .container{padding:12px;flex-direction:column}
+  .filter-panel{width:100%;transform:translateX(-100%)}
+  .filter-panel.open{transform:translateX(0)}
+}
+
+/* noUiSlider small tweaks */
+.noUi-target{background:#f3f6fb;border-radius:8px}
+.noUi-connect{background:linear-gradient(90deg,var(--accent),#06b6d4)}
+
+/* Back to top button (not fixed so it scrolls with content). Placed at right
+  side inside the main content and will move when the page scrolls. */
+.back-to-top{position:fixed;right:18px;bottom:26px;padding:10px 16px;border-radius:12px;border:none;background:#0f172a;color:#fff;cursor:pointer;z-index:1100}
+.back-to-top:hover{transform:translateY(-2px)}
+
+/* Allow wider grid (5 columns) when panel is closed to the left and viewport is large */
+@media (min-width:1000px){
+  .filter-panel{width:420px}
+}
+
+/* autocomplete suggestion box */
+.suggestions{position:relative}
+.suggestions-list{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #e6eef6;border-radius:8px;box-shadow:0 6px 18px rgba(2,6,23,.06);z-index:1200;max-height:180px;overflow:auto}
+.suggestions-list button{display:block;width:100%;text-align:left;padding:8px 10px;border:0;background:transparent;cursor:pointer}
+.suggestions-list button:hover{background:#f3f6fb}
+

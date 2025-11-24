@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dávid utazós ötletei</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@14.7.0/dist/nouislider.min.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <h1>Dávid utazós ötletei</h1>
+      <p class="subtitle">Inspirációk rövidebb és hosszabb utazásokhoz</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside class="filter-panel" id="filterPanel" aria-hidden="true">
+      <button class="ribbon" id="panelToggle" aria-expanded="false" aria-label="Szűrők">
+        <!-- simple filter icon (funnel) -->
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 5h18M6 12h12M10 19h4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+
+      <div class="filters" id="filtersInner">
+        <h3>Szűrők</h3>
+
+        <label class="field">
+          <strong>Kontinens</strong>
+          <select id="continentSelect" multiple>
+            <option value="Európa">Európa</option>
+            <option value="Ázsia">Ázsia</option>
+            <option value="Afrika">Afrika</option>
+            <option value="Észak-Amerika">Észak-Amerika</option>
+            <option value="Dél-Amerika">Dél-Amerika</option>
+            <option value="Ausztrália">Ausztrália</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <strong>Ország</strong>
+          <input type="text" id="countryInput" placeholder="pl. Magyarország, Japán">
+        </label>
+
+        <label class="field">
+          <strong>Napok</strong>
+          <div id="daysSlider" class="range"></div>
+          <div class="range-values"><span id="daysMin">0</span> – <span id="daysMax">30+</span></div>
+        </label>
+
+        <label class="field">
+          <strong>Költség (Ft)</strong>
+          <div id="budgetSlider" class="range"></div>
+          <div class="range-values"><span id="budgetMin">0</span> – <span id="budgetMax">0</span> Ft</div>
+        </label>
+
+        <div class="actions">
+          <button id="clearFilters" class="btn">Szűrők törlése</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content" id="mainContent">
+      <section class="cards" id="cards">
+        <!-- Cards will be generated dynamically from trip pages in /trips/ -->
+      </section>
+
+      <button id="backToTop" class="back-to-top" title="Vissza a tetejére">↑</button>
+    </main>
+  </div>
+
+  <div id="panelBackdrop" class="panel-backdrop" aria-hidden="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/nouislider@14.7.0/dist/nouislider.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
