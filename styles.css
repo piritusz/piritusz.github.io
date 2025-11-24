@@ -17,7 +17,7 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "
   translates fully to the left (out of view) except for the ribbon.
 */
 /* place the panel below the hero so it doesn't block it */
-.filter-panel{--panel-width:360px;width:var(--panel-width);flex-shrink:0;position:fixed;left:calc(22px - var(--panel-width));top:220px;height:calc(100vh - 220px);transition:left .32s ease;z-index:1000}
+.filter-panel{--panel-width:400px;width:var(--panel-width);flex-shrink:0;position:fixed;left:calc(22px - var(--panel-width));top:220px;height:calc(100vh - 220px);transition:left .32s ease;z-index:1000}
 
 /* Opened overlay panel slides in from left and overlays content. The body will be prevented from horizontal scroll when open. */
 .filter-panel.open{left:0}
@@ -29,9 +29,10 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "
 .filter-panel .field{display:block;margin-bottom:14px}
 .filter-panel .field input[type="text"],
 .filter-panel .field select{width:50%;padding:8px;border-radius:8px;border:1px solid #e6eef6}
+.filter-panel .field strong{display:block;margin-bottom:6px}
 .filter-panel .checkbox-list{display:flex;flex-direction:column;gap:8px;max-height:120px;overflow:auto;padding:6px}
-.filter-panel .checkbox-list label{display:flex;align-items:center;gap:8px;cursor:pointer}
-.filter-panel .checkbox-list input[type="checkbox"]{width:16px;height:16px}
+.filter-panel .checkbox-list label{display:flex;align-items:center;gap:8px;cursor:pointer;width:fit-content}
+.filter-panel .checkbox-list input[type="checkbox"]{width:16px;height:16px;cursor:pointer}
 .range{margin-top:8px}
 .range-values{font-size:0.9rem;color:var(--muted);margin-top:6px}
 .actions{margin-top:8px}
@@ -77,18 +78,20 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "
 #budgetSlider .noUi-handle{background:#065f46;border:3px solid #bbf7d0;width:18px;height:18px;box-shadow:0 6px 14px rgba(6,95,70,.18)}
 #budgetSlider .noUi-tooltip{background:rgba(6,95,70,0.9);color:#fff;border-radius:6px;padding:4px}
 
-/* Ensure slider block matches the 50% width of inputs */
-.filter-panel .range{width:50%;display:inline-block}
+/* Put sliders below the label/title and span full width */
+.filter-panel .range{width:50%;display:block}
 
-/* Dual range base styles */
-.dual-range{position:relative;height:28px;width:100%;border-radius:8px}
+/* Dual range base styles: thinner track, larger centered handles */
+.dual-range{position:relative;height:34px;width:100%;border-radius:8px}
+.dual-range{display:inline-block}
+.dual-range::before{content:'';position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:3px;border-radius:3px;background:rgba(2,6,23,0.06);pointer-events:none}
 .dual-range input[type=range]{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);width:100%;-webkit-appearance:none;appearance:none;background:transparent}
-.dual-range input[type=range]::-webkit-slider-runnable-track{height:6px;background:transparent}
-.dual-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid #777;box-shadow:0 4px 10px rgba(0,0,0,.12);margin-top:-6px}
+.dual-range input[type=range]::-webkit-slider-runnable-track{height:3px;background:transparent}
+.dual-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid #777;box-shadow:0 6px 14px rgba(0,0,0,.12);margin-top:-11px;cursor:grab;transition:transform .12s ease}
 .dual-range .range-min::-webkit-slider-thumb{background:#0284c7;border-color:#a7f3d0}
 .dual-range .range-max::-webkit-slider-thumb{background:#065f46;border-color:#bbf7d0}
-.dual-range input[type=range]::-moz-range-track{height:6px;background:transparent}
-.dual-range input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid #777}
+.dual-range input[type=range]::-moz-range-track{height:3px;background:transparent}
+.dual-range input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid #777}
 .dual-range .range-min::-moz-range-thumb{background:#0284c7;border-color:#a7f3d0}
 .dual-range .range-max::-moz-range-thumb{background:#065f46;border-color:#bbf7d0}
 
