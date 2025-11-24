@@ -67,6 +67,32 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "
 .noUi-target{background:#f3f6fb;border-radius:8px}
 .noUi-connect{background:linear-gradient(90deg,var(--accent),#06b6d4)}
 
+/* Days slider (light blue) */
+#daysSlider .noUi-connect{background:linear-gradient(90deg,#cfeffd,#7dd3fc)}
+#daysSlider .noUi-handle{background:#0284c7;border:3px solid #a7f3d0;width:18px;height:18px;box-shadow:0 6px 14px rgba(2,132,199,.18)}
+#daysSlider .noUi-tooltip{background:rgba(2,132,199,0.9);color:#fff;border-radius:6px;padding:4px}
+
+/* Budget slider (money green) */
+#budgetSlider .noUi-connect{background:linear-gradient(90deg,#bbf7d0,#34d399)}
+#budgetSlider .noUi-handle{background:#065f46;border:3px solid #bbf7d0;width:18px;height:18px;box-shadow:0 6px 14px rgba(6,95,70,.18)}
+#budgetSlider .noUi-tooltip{background:rgba(6,95,70,0.9);color:#fff;border-radius:6px;padding:4px}
+
+/* Ensure slider block matches the 50% width of inputs */
+.filter-panel .range{width:50%;display:inline-block}
+
+/* Dual range base styles */
+.dual-range{position:relative;height:28px;width:100%;border-radius:8px}
+.dual-range input[type=range]{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);width:100%;-webkit-appearance:none;appearance:none;background:transparent}
+.dual-range input[type=range]::-webkit-slider-runnable-track{height:6px;background:transparent}
+.dual-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid #777;box-shadow:0 4px 10px rgba(0,0,0,.12);margin-top:-6px}
+.dual-range .range-min::-webkit-slider-thumb{background:#0284c7;border-color:#a7f3d0}
+.dual-range .range-max::-webkit-slider-thumb{background:#065f46;border-color:#bbf7d0}
+.dual-range input[type=range]::-moz-range-track{height:6px;background:transparent}
+.dual-range input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid #777}
+.dual-range .range-min::-moz-range-thumb{background:#0284c7;border-color:#a7f3d0}
+.dual-range .range-max::-moz-range-thumb{background:#065f46;border-color:#bbf7d0}
+
+
 /* Back to top button (not fixed so it scrolls with content). Placed at right
   side inside the main content and will move when the page scrolls. */
 .back-to-top{position:fixed;right:18px;bottom:26px;padding:10px 16px;border-radius:12px;border:none;background:#0f172a;color:#fff;cursor:pointer;z-index:1100}
