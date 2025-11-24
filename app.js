@@ -18,8 +18,12 @@ document.addEventListener('DOMContentLoaded', function(){
   ];
 
   let cards = [];
-  let maxDays = 30;
-  let maxBudget = 100000;
+  // Slider visual maximums (user-specified)
+  const sliderMaxDays = 14; // 14+
+  const sliderMaxBudget = 500000; // 500000+
+  // Data-derived maxima (used for other purposes / fallback limits)
+  let dataMaxDays = 30;
+  let dataMaxBudget = 100000;
 
   // Create basic filter controls inside the filtersInner container
   function createFilterControls(){
@@ -83,7 +87,14 @@ document.addEventListener('DOMContentLoaded', function(){
     article.dataset.days = trip.days||0;
     article.dataset.budget = trip.budget||0;
     article.dataset.tags = (trip.tags||[]).join(',');
-    const cover = document.createElement('div'); cover.className='card-cover'; cover.style.backgroundImage = `url('${trip.cover || "../images/placeholder.jpg"}')`;
+    const cover = document.createElement('div'); cover.className='card-cover';
+    // try to load provided cover; if it 404s, fall back to an inline SVG placeholder
+    (function setCoverImage(url){
+      const placeholder = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600"><rect fill="%23e5e7eb" width="100%" height="100%"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" fill="%236b7280">Kép hiányzik</text></svg>')}`;
+      if(!url){ cover.style.backgroundImage = `url('${placeholder}')`; return; }
+      const img = new Image(); img.onload = function(){ cover.style.backgroundImage = `url('${url}')`; }; img.onerror = function(){ cover.style.backgroundImage = `url('${placeholder}')`; };
+      img.src = url;
+    })(trip.cover);
     // overlay title/meta on the cover so text fits on the picture
     const overlay = document.createElement('div'); overlay.className = 'cover-overlay';
     const h = document.createElement('h4'); h.className='trip-title'; h.textContent = trip.title;
@@ -116,45 +127,82 @@ document.addEventListener('DOMContentLoaded', function(){
       cb.addEventListener('change', filterCards);
     });
 
-    // compute ranges
+    // compute data-derived maxima
     const daysValues = cards.map(c=>parseInt(c.dataset.days||0,10));
-    maxDays = Math.max(30, ...daysValues);
+    dataMaxDays = Math.max(1, ...daysValues);
     const budgets = cards.map(c=>parseInt(c.dataset.budget||0,10));
-    maxBudget = Math.max(100000, ...budgets);
+    dataMaxBudget = Math.max(0, ...budgets);
 
-    // create sliders (use noUiSlider if available, otherwise create a minimal fallback)
-    if(typeof noUiSlider !== 'undefined'){
-      noUiSlider.create(daysSliderEl, {
-        start: [0, maxDays], connect: true, step:1, range:{min:0,max:maxDays}, tooltips:[true,true], format:{to: v=>Math.round(v), from: v=>Number(v)}
-      });
-      noUiSlider.create(budgetSliderEl, {
-        start: [0, maxBudget], connect: true, step:1000, range:{min:0,max:maxBudget}, tooltips:[true,true], format:{to: v=>Math.round(v), from: v=>Number(v)}
-      });
+    // create custom dual-range sliders (two <input type=range>) so sliders always appear
+    function createDualRange(containerEl, opts){
+      // clear any previous content
+      containerEl.innerHTML = '';
+      const wrapper = document.createElement('div'); wrapper.className = 'dual-range';
+      // create inputs and ensure their type attribute is explicitly set to 'range'
+      const minR = document.createElement('input'); minR.setAttribute('type','range');
+      const maxR = document.createElement('input'); maxR.setAttribute('type','range');
+      // set numeric bounds and initial values
+      minR.min = opts.min; minR.max = opts.max; minR.step = opts.step || 1; minR.value = opts.startMin;
+      maxR.min = opts.min; maxR.max = opts.max; maxR.step = opts.step || 1; maxR.value = opts.startMax;
+      minR.className = 'range-min'; maxR.className = 'range-max';
+      wrapper.appendChild(minR); wrapper.appendChild(maxR); containerEl.appendChild(wrapper);
 
-      daysSliderEl.noUiSlider.on('update', function(values){ daysMinEl.textContent = values[0]; daysMaxEl.textContent = (values[1] >= maxDays ? values[1] + '+' : values[1]); filterCards(); });
-      budgetSliderEl.noUiSlider.on('update', function(values){ budgetMinEl.textContent = formatNumber(values[0]); budgetMaxEl.textContent = formatNumber(values[1]); filterCards(); });
-    } else {
-      // fallback: two number inputs (min / max)
-      daysSliderEl.innerHTML = '';
-      const dMin = document.createElement('input'); dMin.type='number'; dMin.value=0; dMin.min=0; dMin.max=maxDays; dMin.style.width='48%';
-      const dMax = document.createElement('input'); dMax.type='number'; dMax.value=maxDays; dMax.min=0; dMax.max=maxDays; dMax.style.width='48%';
-      daysSliderEl.appendChild(dMin); daysSliderEl.appendChild(dMax);
-      daysMinEl.textContent = dMin.value; daysMaxEl.textContent = dMax.value + '+';
-      const updDays = debounce(()=>{ daysMinEl.textContent = dMin.value; daysMaxEl.textContent = dMax.value; filterCards(); }, 150);
-      dMin.addEventListener('input', updDays); dMax.addEventListener('input', updDays);
+      // update visual fill
+      function updateFill(){
+        const min = Number(minR.value); const max = Number(maxR.value);
+        if(min > max){ if(this === minR) maxR.value = min; else minR.value = max; }
+        const pct1 = ((min - opts.min) / (opts.max - opts.min)) * 100;
+        const pct2 = ((max - opts.min) / (opts.max - opts.min)) * 100;
+        wrapper.style.background = `linear-gradient(90deg, rgba(0,0,0,0.06) ${pct1}%, ${opts.fillColor} ${pct1}%, ${opts.fillColor} ${pct2}%, rgba(0,0,0,0.06) ${pct2}%)`;
+      }
 
-      budgetSliderEl.innerHTML = '';
-      const bMin = document.createElement('input'); bMin.type='number'; bMin.value=0; bMin.min=0; bMin.max=maxBudget; bMin.step=1000; bMin.style.width='48%';
-      const bMax = document.createElement('input'); bMax.type='number'; bMax.value=maxBudget; bMax.min=0; bMax.max=maxBudget; bMax.step=1000; bMax.style.width='48%';
-      budgetSliderEl.appendChild(bMin); budgetSliderEl.appendChild(bMax);
-      budgetMinEl.textContent = formatNumber(bMin.value); budgetMaxEl.textContent = formatNumber(bMax.value);
-      const updBudget = debounce(()=>{ budgetMinEl.textContent = formatNumber(bMin.value); budgetMaxEl.textContent = formatNumber(bMax.value); filterCards(); }, 150);
-      bMin.addEventListener('input', updBudget); bMax.addEventListener('input', updBudget);
+      minR.addEventListener('input', ()=>{ updateFill(); onUpdate(); });
+      maxR.addEventListener('input', ()=>{ updateFill(); onUpdate(); });
 
-      // store fallback elements for getters
-      daysSliderEl._fallback = {minInput:dMin, maxInput:dMax};
-      budgetSliderEl._fallback = {minInput:bMin, maxInput:bMax};
+      // Defensive: Ensure created inputs remain type=range. Some server/caching issues
+      // or other scripts can accidentally replace elements; observe and repair.
+      try{
+        const mo = new MutationObserver(muts => {
+          muts.forEach(m => {
+            if(m.type === 'childList' || m.type === 'attributes'){
+              // force types
+              if(minR.getAttribute('type') !== 'range'){
+                console.warn('Repairing min input type -> range'); minR.setAttribute('type','range');
+              }
+              if(maxR.getAttribute('type') !== 'range'){
+                console.warn('Repairing max input type -> range'); maxR.setAttribute('type','range');
+              }
+              // re-run fill update if values changed
+              updateFill();
+            }
+          });
+        });
+        mo.observe(containerEl, {childList:true, subtree:true, attributes:true});
+      }catch(e){ /* ignore if MutationObserver unsupported */ }
+
+      // expose small API
+      function onUpdate(){
+        const v1 = Number(minR.value); const v2 = Number(maxR.value);
+        if(opts.onChange) opts.onChange([v1, v2]);
+      }
+      // initial fill
+      updateFill(); onUpdate();
+      return {minInput:minR, maxInput:maxR, updateFill};
     }
+
+    // create days slider
+    const daysObj = createDualRange(daysSliderEl, {min:1, max:sliderMaxDays, startMin:1, startMax:sliderMaxDays, step:1, fillColor:'#7dd3fc'});
+    daysSliderEl._ranges = daysObj;
+    daysSliderEl._rangesCallback = function(values){ daysMinEl.textContent = values[0]; daysMaxEl.textContent = (values[1] >= sliderMaxDays ? values[1] + '+' : values[1]); filterCards(); };
+    daysSliderEl._ranges.minInput.addEventListener('input', ()=> daysSliderEl._rangesCallback([Number(daysSliderEl._ranges.minInput.value), Number(daysSliderEl._ranges.maxInput.value)]));
+    daysSliderEl._ranges.maxInput.addEventListener('input', ()=> daysSliderEl._rangesCallback([Number(daysSliderEl._ranges.minInput.value), Number(daysSliderEl._ranges.maxInput.value)]));
+
+    // create budget slider (green)
+    const budgetObj = createDualRange(budgetSliderEl, {min:0, max:sliderMaxBudget, startMin:0, startMax:sliderMaxBudget, step:1000, fillColor:'#34d399'});
+    budgetSliderEl._ranges = budgetObj;
+    budgetSliderEl._rangesCallback = function(values){ budgetMinEl.textContent = formatNumber(values[0]); budgetMaxEl.textContent = (values[1] >= sliderMaxBudget ? formatNumber(values[1]) + '+' : formatNumber(values[1])); filterCards(); };
+    budgetSliderEl._ranges.minInput.addEventListener('input', ()=> budgetSliderEl._rangesCallback([Number(budgetSliderEl._ranges.minInput.value), Number(budgetSliderEl._ranges.maxInput.value)]));
+    budgetSliderEl._ranges.maxInput.addEventListener('input', ()=> budgetSliderEl._rangesCallback([Number(budgetSliderEl._ranges.minInput.value), Number(budgetSliderEl._ranges.maxInput.value)]));
 
     // continent checkboxes already wired above
     countryInput.addEventListener('input', onCountryInput);
@@ -228,12 +276,12 @@ document.addEventListener('DOMContentLoaded', function(){
     if(countryInput) countryInput.value='';
     // reset sliders
     if(daysSliderEl){
-      if(daysSliderEl.noUiSlider){ daysSliderEl.noUiSlider.set([0, maxDays]); }
-      else if(daysSliderEl._fallback){ daysSliderEl._fallback.minInput.value = 0; daysSliderEl._fallback.maxInput.value = maxDays; daysMinEl.textContent = 0; daysMaxEl.textContent = maxDays; }
+      if(daysSliderEl.noUiSlider){ daysSliderEl.noUiSlider.set([1, sliderMaxDays]); }
+      else if(daysSliderEl._ranges){ daysSliderEl._ranges.minInput.value = 1; daysSliderEl._ranges.maxInput.value = sliderMaxDays; daysMinEl.textContent = 1; daysMaxEl.textContent = sliderMaxDays + '+'; daysSliderEl._ranges.updateFill(); }
     }
     if(budgetSliderEl){
-      if(budgetSliderEl.noUiSlider){ budgetSliderEl.noUiSlider.set([0, maxBudget]); }
-      else if(budgetSliderEl._fallback){ budgetSliderEl._fallback.minInput.value = 0; budgetSliderEl._fallback.maxInput.value = maxBudget; budgetMinEl.textContent = formatNumber(0); budgetMaxEl.textContent = formatNumber(maxBudget); }
+      if(budgetSliderEl.noUiSlider){ budgetSliderEl.noUiSlider.set([0, sliderMaxBudget]); }
+      else if(budgetSliderEl._ranges){ budgetSliderEl._ranges.minInput.value = 0; budgetSliderEl._ranges.maxInput.value = sliderMaxBudget; budgetMinEl.textContent = formatNumber(0); budgetMaxEl.textContent = formatNumber(sliderMaxBudget) + '+'; budgetSliderEl._ranges.updateFill(); }
     }
     filterCards();
   }
@@ -245,16 +293,16 @@ document.addEventListener('DOMContentLoaded', function(){
   function filterCards(){
     const selectedContinents = getSelectedContinents();
     const countryQuery = (countryInput && countryInput.value?countryInput.value:'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
-    // days range getter (support fallback)
-    let daysRange = [0, maxDays];
+    // days range getter (support our dual-range implementation)
+    let daysRange = [1, sliderMaxDays];
     if(daysSliderEl){
       if(daysSliderEl.noUiSlider){ daysRange = daysSliderEl.noUiSlider.get().map(v=>Number(v)); }
-      else if(daysSliderEl._fallback){ daysRange = [Number(daysSliderEl._fallback.minInput.value||0), Number(daysSliderEl._fallback.maxInput.value||maxDays)]; }
+      else if(daysSliderEl._ranges){ daysRange = [Number(daysSliderEl._ranges.minInput.value||1), Number(daysSliderEl._ranges.maxInput.value||sliderMaxDays)]; }
     }
-    let budgetRange = [0, maxBudget];
+    let budgetRange = [0, sliderMaxBudget];
     if(budgetSliderEl){
       if(budgetSliderEl.noUiSlider){ budgetRange = budgetSliderEl.noUiSlider.get().map(v=>Number(v)); }
-      else if(budgetSliderEl._fallback){ budgetRange = [Number(budgetSliderEl._fallback.minInput.value||0), Number(budgetSliderEl._fallback.maxInput.value||maxBudget)]; }
+      else if(budgetSliderEl._ranges){ budgetRange = [Number(budgetSliderEl._ranges.minInput.value||0), Number(budgetSliderEl._ranges.maxInput.value||sliderMaxBudget)]; }
     }
 
     cards.forEach(card => {
