@@ -33,8 +33,8 @@ document.addEventListener('DOMContentLoaded', function(){
         <div id="continentList" class="checkbox-list" aria-label="Kontinensek"></div>
       </label>
       <label class="field"><strong>Ország</strong><input type="text" id="countryInput" placeholder="pl. Magyarország, Japán"></label>
-      <label class="field"><strong>Napok</strong><div id="daysSlider" class="range"></div><div class="range-values"><span id="daysMin">0</span> – <span id="daysMax">30+</span></div></label>
-      <label class="field"><strong>Költség (Ft)</strong><div id="budgetSlider" class="range"></div><div class="range-values"><span id="budgetMin">0</span> – <span id="budgetMax">0</span> Ft</div></label>
+      <label class="field"><strong>Napok</strong><div id="daysSlider" class="range"></div><div class="range-values"><span id="daysMin">1</span> – <span id="daysMax">${sliderMaxDays}+</span></div></label>
+      <label class="field"><strong>Költség (Ft)</strong><div id="budgetSlider" class="range"></div><div class="range-values"><span id="budgetMin">0</span> – <span id="budgetMax">${sliderMaxBudget}</span> Ft</div></label>
       <div class="actions"><button id="clearFilters" class="btn">Szűrők törlése</button></div>
     `;
 
@@ -145,19 +145,47 @@ document.addEventListener('DOMContentLoaded', function(){
       minR.min = opts.min; minR.max = opts.max; minR.step = opts.step || 1; minR.value = opts.startMin;
       maxR.min = opts.min; maxR.max = opts.max; maxR.step = opts.step || 1; maxR.value = opts.startMax;
       minR.className = 'range-min'; maxR.className = 'range-max';
+      // initial stacking order
+      minR.style.zIndex = 3; maxR.style.zIndex = 2;
       wrapper.appendChild(minR); wrapper.appendChild(maxR); containerEl.appendChild(wrapper);
+
+      // remember which input was most recently changed so we resolve collisions predictably
+      let lastChanged = null;
 
       // update visual fill
       function updateFill(){
         const min = Number(minR.value); const max = Number(maxR.value);
-        if(min > max){ if(this === minR) maxR.value = min; else minR.value = max; }
-        const pct1 = ((min - opts.min) / (opts.max - opts.min)) * 100;
-        const pct2 = ((max - opts.min) / (opts.max - opts.min)) * 100;
-        wrapper.style.background = `linear-gradient(90deg, rgba(0,0,0,0.06) ${pct1}%, ${opts.fillColor} ${pct1}%, ${opts.fillColor} ${pct2}%, rgba(0,0,0,0.06) ${pct2}%)`;
+        if(min > max){
+          if(lastChanged === 'min'){ maxR.value = min; }
+          else if(lastChanged === 'max'){ minR.value = max; }
+          else { maxR.value = min; }
+        }
+        const vMin = Number(minR.value); const vMax = Number(maxR.value);
+        const pct1 = ((vMin - opts.min) / (opts.max - opts.min)) * 100;
+        const pct2 = ((vMax - opts.min) / (opts.max - opts.min)) * 100;
+        // only color the filled segment; outside areas remain neutral (track ::before)
+        wrapper.style.background = `linear-gradient(90deg, transparent ${pct1}%, ${opts.fillColor} ${pct1}%, ${opts.fillColor} ${pct2}%, transparent ${pct2}%)`;
+        // ensure active handle is on top
+        if(lastChanged === 'min'){ minR.style.zIndex = 4; maxR.style.zIndex = 3; }
+        else if(lastChanged === 'max'){ maxR.style.zIndex = 4; minR.style.zIndex = 3; }
+        else { minR.style.zIndex = 3; maxR.style.zIndex = 2; }
       }
 
-      minR.addEventListener('input', ()=>{ updateFill(); onUpdate(); });
-      maxR.addEventListener('input', ()=>{ updateFill(); onUpdate(); });
+      // make dragging one handle temporarily ignore pointer events on the other to avoid jumps
+      minR.addEventListener('pointerdown', (ev)=>{ lastChanged='min'; try{ minR.setPointerCapture(ev.pointerId); }catch(e){}; maxR.style.pointerEvents='none'; minR.style.cursor='grabbing'; });
+      minR.addEventListener('pointerup', (ev)=>{ try{ minR.releasePointerCapture(ev.pointerId); }catch(e){}; maxR.style.pointerEvents='auto'; lastChanged=null; minR.style.cursor='grab'; updateFill(); });
+      minR.addEventListener('pointercancel', (ev)=>{ try{ minR.releasePointerCapture(ev.pointerId); }catch(e){}; maxR.style.pointerEvents='auto'; lastChanged=null; minR.style.cursor='grab'; updateFill(); });
+      maxR.addEventListener('pointerdown', (ev)=>{ lastChanged='max'; try{ maxR.setPointerCapture(ev.pointerId); }catch(e){}; minR.style.pointerEvents='none'; maxR.style.cursor='grabbing'; });
+      maxR.addEventListener('pointerup', (ev)=>{ try{ maxR.releasePointerCapture(ev.pointerId); }catch(e){}; minR.style.pointerEvents='auto'; lastChanged=null; maxR.style.cursor='grab'; updateFill(); });
+      maxR.addEventListener('pointercancel', (ev)=>{ try{ maxR.releasePointerCapture(ev.pointerId); }catch(e){}; minR.style.pointerEvents='auto'; lastChanged=null; maxR.style.cursor='grab'; updateFill(); });
+
+      // Prevent clicks on the wrapper from jumping handles; only allow pointerdown on actual inputs
+      wrapper.addEventListener('pointerdown', (ev)=>{
+        if(ev.target !== minR && ev.target !== maxR){ ev.preventDefault(); ev.stopImmediatePropagation(); }
+      });
+
+      minR.addEventListener('input', ()=>{ lastChanged='min'; updateFill(); onUpdate(); });
+      maxR.addEventListener('input', ()=>{ lastChanged='max'; updateFill(); onUpdate(); });
 
       // Defensive: Ensure created inputs remain type=range. Some server/caching issues
       // or other scripts can accidentally replace elements; observe and repair.
@@ -196,6 +224,8 @@ document.addEventListener('DOMContentLoaded', function(){
     daysSliderEl._rangesCallback = function(values){ daysMinEl.textContent = values[0]; daysMaxEl.textContent = (values[1] >= sliderMaxDays ? values[1] + '+' : values[1]); filterCards(); };
     daysSliderEl._ranges.minInput.addEventListener('input', ()=> daysSliderEl._rangesCallback([Number(daysSliderEl._ranges.minInput.value), Number(daysSliderEl._ranges.maxInput.value)]));
     daysSliderEl._ranges.maxInput.addEventListener('input', ()=> daysSliderEl._rangesCallback([Number(daysSliderEl._ranges.minInput.value), Number(daysSliderEl._ranges.maxInput.value)]));
+    // call once to initialize displayed min/max text
+    daysSliderEl._rangesCallback([Number(daysSliderEl._ranges.minInput.value), Number(daysSliderEl._ranges.maxInput.value)]);
 
     // create budget slider (green)
     const budgetObj = createDualRange(budgetSliderEl, {min:0, max:sliderMaxBudget, startMin:0, startMax:sliderMaxBudget, step:1000, fillColor:'#34d399'});
@@ -203,6 +233,8 @@ document.addEventListener('DOMContentLoaded', function(){
     budgetSliderEl._rangesCallback = function(values){ budgetMinEl.textContent = formatNumber(values[0]); budgetMaxEl.textContent = (values[1] >= sliderMaxBudget ? formatNumber(values[1]) + '+' : formatNumber(values[1])); filterCards(); };
     budgetSliderEl._ranges.minInput.addEventListener('input', ()=> budgetSliderEl._rangesCallback([Number(budgetSliderEl._ranges.minInput.value), Number(budgetSliderEl._ranges.maxInput.value)]));
     budgetSliderEl._ranges.maxInput.addEventListener('input', ()=> budgetSliderEl._rangesCallback([Number(budgetSliderEl._ranges.minInput.value), Number(budgetSliderEl._ranges.maxInput.value)]));
+    // call once to initialize displayed min/max text
+    budgetSliderEl._rangesCallback([Number(budgetSliderEl._ranges.minInput.value), Number(budgetSliderEl._ranges.maxInput.value)]);
 
     // continent checkboxes already wired above
     countryInput.addEventListener('input', onCountryInput);
@@ -318,8 +350,8 @@ document.addEventListener('DOMContentLoaded', function(){
         ok = countryQuery.some(q => cardCountries.includes(q));
       }
 
-      if(ok){ const d = Number(card.dataset.days||0); ok = d >= daysRange[0] && d <= daysRange[1]; }
-      if(ok){ const b = Number(card.dataset.budget||0); ok = b >= budgetRange[0] && b <= budgetRange[1]; }
+      if(ok){ const d = Number(card.dataset.days||0); const daysUpper = daysRange[1] >= sliderMaxDays ? Infinity : daysRange[1]; ok = d >= daysRange[0] && d <= daysUpper; }
+      if(ok){ const b = Number(card.dataset.budget||0); const budgetUpper = budgetRange[1] >= sliderMaxBudget ? Infinity : budgetRange[1]; ok = b >= budgetRange[0] && b <= budgetUpper; }
 
       card.style.display = ok ? '' : 'none';
     });
