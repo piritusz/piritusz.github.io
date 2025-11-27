@@ -10,11 +10,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // We'll load trip pages and create cards dynamically
   const tripPages = [
-    'trips/trip1.html',
-    'trips/trip2.html',
-    'trips/trip3.html',
-    'trips/trip4.html',
-    'trips/trip5.html'
+    'trips/oresund-szoros-kortura.html',
+    'trips/vadkaland-belgiumban.html',
+    'trips/japan-korut.html',
+    'trips/afrikai-szafari.html',
+    'trips/fjordok-es-eszaki-feny.html'
   ];
 
   let cards = [];
@@ -26,15 +26,14 @@ document.addEventListener('DOMContentLoaded', function(){
   let dataMaxBudget = 100000;
 
   // Create basic filter controls inside the filtersInner container
-  function createFilterControls(){
+    function createFilterControls(){
     filtersInner.innerHTML = `
-      <h3>Szűrők</h3>
       <label class="field"><strong>Kontinens</strong>
         <div id="continentList" class="checkbox-list" aria-label="Kontinensek"></div>
       </label>
       <label class="field"><strong>Ország</strong><input type="text" id="countryInput" placeholder="pl. Magyarország, Japán"></label>
-      <label class="field"><strong>Napok</strong><div id="daysSlider" class="range"></div><div class="range-values"><span id="daysMin">1</span> – <span id="daysMax">${sliderMaxDays}+</span></div></label>
-      <label class="field"><strong>Költség (Ft)</strong><div id="budgetSlider" class="range"></div><div class="range-values"><span id="budgetMin">0</span> – <span id="budgetMax">${sliderMaxBudget}</span> Ft</div></label>
+      <label class="field"><strong>Napok</strong><div id="daysSlider" class="range"></div></label>
+      <label class="field"><strong>Költség (Ft/fő)</strong><div id="budgetSlider" class="range"></div></label>
       <div class="actions"><button id="clearFilters" class="btn">Szűrők törlése</button></div>
     `;
 
@@ -44,10 +43,6 @@ document.addEventListener('DOMContentLoaded', function(){
     countryInput = document.getElementById('countryInput');
     daysSliderEl = document.getElementById('daysSlider');
     budgetSliderEl = document.getElementById('budgetSlider');
-    daysMinEl = document.getElementById('daysMin');
-    daysMaxEl = document.getElementById('daysMax');
-    budgetMinEl = document.getElementById('budgetMin');
-    budgetMaxEl = document.getElementById('budgetMax');
     clearBtn = document.getElementById('clearFilters');
   }
 
@@ -71,10 +66,10 @@ document.addEventListener('DOMContentLoaded', function(){
       });
 
       // create filter controls AFTER we know cards (even if there are none)
-      createFilterControls();
-      initFiltersAndSliders();
-      // build country suggestion source
-      buildCountrySuggestions();
+        createFilterControls();
+          initFiltersAndSliders();
+          // build country suggestion source
+          buildCountrySuggestions();
     });
 
   function formatNumber(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
@@ -133,108 +128,87 @@ document.addEventListener('DOMContentLoaded', function(){
     const budgets = cards.map(c=>parseInt(c.dataset.budget||0,10));
     dataMaxBudget = Math.max(0, ...budgets);
 
-    // create custom dual-range sliders (two <input type=range>) so sliders always appear
-    function createDualRange(containerEl, opts){
-      // clear any previous content
+    // createDoubleSlider: builds [min span] [slider (two range inputs)] [max span]
+    function createDoubleSlider(containerEl, opts){
+      // opts: min, max, startMin, startMax, step, format (value->string)
       containerEl.innerHTML = '';
+      // left label
+      const left = document.createElement('span'); left.className = 'slider-label slider-label-min'; left.style.color = '#000';
+      // wrapper for slider track and inputs
       const wrapper = document.createElement('div'); wrapper.className = 'dual-range';
-      // create inputs and ensure their type attribute is explicitly set to 'range'
-      const minR = document.createElement('input'); minR.setAttribute('type','range');
-      const maxR = document.createElement('input'); maxR.setAttribute('type','range');
-      // set numeric bounds and initial values
-      minR.min = opts.min; minR.max = opts.max; minR.step = opts.step || 1; minR.value = opts.startMin;
-      maxR.min = opts.min; maxR.max = opts.max; maxR.step = opts.step || 1; maxR.value = opts.startMax;
-      minR.className = 'range-min'; maxR.className = 'range-max';
-      // initial stacking order
-      minR.style.zIndex = 3; maxR.style.zIndex = 2;
-      wrapper.appendChild(minR); wrapper.appendChild(maxR); containerEl.appendChild(wrapper);
+      // right label
+      const right = document.createElement('span'); right.className = 'slider-label slider-label-max'; right.style.color = '#000';
 
-      // remember which input was most recently changed so we resolve collisions predictably
-      let lastChanged = null;
+      // inputs operate over the numeric range [opts.min .. opts.max]
+      const a = document.createElement('input'); a.type='range';
+      const b = document.createElement('input'); b.type='range';
+      a.className = 'range-min'; b.className = 'range-max';
+      a.min = opts.min; a.max = opts.max; a.step = opts.step || 1; a.value = opts.startMin;
+      b.min = opts.min; b.max = opts.max; b.step = opts.step || 1; b.value = opts.startMax;
+      // append
+      wrapper.appendChild(a); wrapper.appendChild(b);
+      containerEl.appendChild(left); containerEl.appendChild(wrapper); containerEl.appendChild(right);
 
-      // update visual fill
-      function updateFill(){
-        const min = Number(minR.value); const max = Number(maxR.value);
-        if(min > max){
-          if(lastChanged === 'min'){ maxR.value = min; }
-          else if(lastChanged === 'max'){ minR.value = max; }
-          else { maxR.value = min; }
-        }
-        const vMin = Number(minR.value); const vMax = Number(maxR.value);
-        const pct1 = ((vMin - opts.min) / (opts.max - opts.min)) * 100;
-        const pct2 = ((vMax - opts.min) / (opts.max - opts.min)) * 100;
-        // only color the filled segment; outside areas remain neutral (track ::before)
-        wrapper.style.background = `linear-gradient(90deg, transparent ${pct1}%, ${opts.fillColor} ${pct1}%, ${opts.fillColor} ${pct2}%, transparent ${pct2}%)`;
-        // ensure active handle is on top
-        if(lastChanged === 'min'){ minR.style.zIndex = 4; maxR.style.zIndex = 3; }
-        else if(lastChanged === 'max'){ maxR.style.zIndex = 4; minR.style.zIndex = 3; }
-        else { minR.style.zIndex = 3; maxR.style.zIndex = 2; }
+      // ensure visual colors are set
+      containerEl.style.setProperty('--active', opts.fillColor || '#D9775B');
+      containerEl.style.setProperty('--inactive', opts.inactiveColor || '#D1D5DB');
+
+      // ensure wrapper width is half of panel: implemented in CSS (.dual-range width:50%)
+
+      let last = null;
+      function clampAndSync(){
+        let v1 = Number(a.value); let v2 = Number(b.value);
+        if(v1 > v2){ if(last === 'min'){ b.value = v1; v2 = v1; } else { a.value = v2; v1 = v2; } }
+        const pct1 = ((v1 - opts.min) / (opts.max - opts.min)) * 100;
+        const pct2 = ((v2 - opts.min) / (opts.max - opts.min)) * 100;
+        containerEl.style.setProperty('--p1', pct1 + '%');
+        containerEl.style.setProperty('--p2', pct2 + '%');
+        // update labels
+        left.textContent = opts.format ? opts.format(v1) : String(v1);
+        right.textContent = (v2 >= opts.max) ? (opts.format ? opts.format(v2) + '+' : String(v2) + '+') : (opts.format ? opts.format(v2) : String(v2));
       }
 
-      // make dragging one handle temporarily ignore pointer events on the other to avoid jumps
-      minR.addEventListener('pointerdown', (ev)=>{ lastChanged='min'; try{ minR.setPointerCapture(ev.pointerId); }catch(e){}; maxR.style.pointerEvents='none'; minR.style.cursor='grabbing'; });
-      minR.addEventListener('pointerup', (ev)=>{ try{ minR.releasePointerCapture(ev.pointerId); }catch(e){}; maxR.style.pointerEvents='auto'; lastChanged=null; minR.style.cursor='grab'; updateFill(); });
-      minR.addEventListener('pointercancel', (ev)=>{ try{ minR.releasePointerCapture(ev.pointerId); }catch(e){}; maxR.style.pointerEvents='auto'; lastChanged=null; minR.style.cursor='grab'; updateFill(); });
-      maxR.addEventListener('pointerdown', (ev)=>{ lastChanged='max'; try{ maxR.setPointerCapture(ev.pointerId); }catch(e){}; minR.style.pointerEvents='none'; maxR.style.cursor='grabbing'; });
-      maxR.addEventListener('pointerup', (ev)=>{ try{ maxR.releasePointerCapture(ev.pointerId); }catch(e){}; minR.style.pointerEvents='auto'; lastChanged=null; maxR.style.cursor='grab'; updateFill(); });
-      maxR.addEventListener('pointercancel', (ev)=>{ try{ maxR.releasePointerCapture(ev.pointerId); }catch(e){}; minR.style.pointerEvents='auto'; lastChanged=null; maxR.style.cursor='grab'; updateFill(); });
+      a.addEventListener('pointerdown', (e)=>{ last='min'; try{ a.setPointerCapture(e.pointerId);}catch(e){}; a.style.cursor='grabbing'; });
+      a.addEventListener('pointerup', (e)=>{ try{ a.releasePointerCapture(e.pointerId);}catch(e){}; a.style.cursor='grab'; last=null; clampAndSync(); if(opts.onChange) opts.onChange([Number(a.value), Number(b.value)]);});
+      b.addEventListener('pointerdown', (e)=>{ last='max'; try{ b.setPointerCapture(e.pointerId);}catch(e){}; b.style.cursor='grabbing'; });
+      b.addEventListener('pointerup', (e)=>{ try{ b.releasePointerCapture(e.pointerId);}catch(e){}; b.style.cursor='grab'; last=null; clampAndSync(); if(opts.onChange) opts.onChange([Number(a.value), Number(b.value)]);});
 
-      // Prevent clicks on the wrapper from jumping handles; only allow pointerdown on actual inputs
-      wrapper.addEventListener('pointerdown', (ev)=>{
-        if(ev.target !== minR && ev.target !== maxR){ ev.preventDefault(); ev.stopImmediatePropagation(); }
-      });
+      a.addEventListener('input', ()=>{ last='min'; clampAndSync(); if(opts.onChange) opts.onChange([Number(a.value), Number(b.value)]); });
+      b.addEventListener('input', ()=>{ last='max'; clampAndSync(); if(opts.onChange) opts.onChange([Number(a.value), Number(b.value)]); });
 
-      minR.addEventListener('input', ()=>{ lastChanged='min'; updateFill(); onUpdate(); });
-      maxR.addEventListener('input', ()=>{ lastChanged='max'; updateFill(); onUpdate(); });
-
-      // Defensive: Ensure created inputs remain type=range. Some server/caching issues
-      // or other scripts can accidentally replace elements; observe and repair.
-      try{
-        const mo = new MutationObserver(muts => {
-          muts.forEach(m => {
-            if(m.type === 'childList' || m.type === 'attributes'){
-              // force types
-              if(minR.getAttribute('type') !== 'range'){
-                console.warn('Repairing min input type -> range'); minR.setAttribute('type','range');
-              }
-              if(maxR.getAttribute('type') !== 'range'){
-                console.warn('Repairing max input type -> range'); maxR.setAttribute('type','range');
-              }
-              // re-run fill update if values changed
-              updateFill();
-            }
-          });
-        });
-        mo.observe(containerEl, {childList:true, subtree:true, attributes:true});
-      }catch(e){ /* ignore if MutationObserver unsupported */ }
-
-      // expose small API
-      function onUpdate(){
-        const v1 = Number(minR.value); const v2 = Number(maxR.value);
-        if(opts.onChange) opts.onChange([v1, v2]);
-      }
-      // initial fill
-      updateFill(); onUpdate();
-      return {minInput:minR, maxInput:maxR, updateFill};
+      // expose API
+      clampAndSync();
+      return {minInput:a, maxInput:b, updateFill:clampAndSync};
     }
 
-    // create days slider
-    const daysObj = createDualRange(daysSliderEl, {min:1, max:sliderMaxDays, startMin:1, startMax:sliderMaxDays, step:1, fillColor:'#7dd3fc'});
+    // create days slider (Napok) — range 1..14 displayed with 14+
+    const daysObj = createDoubleSlider(daysSliderEl, {min:1, max:14, startMin:1, startMax:14, step:1,
+      format: v => String(v), fillColor:'#D9775B', inactiveColor:'#D1D5DB', onChange: ()=>filterCards()});
     daysSliderEl._ranges = daysObj;
-    daysSliderEl._rangesCallback = function(values){ daysMinEl.textContent = values[0]; daysMaxEl.textContent = (values[1] >= sliderMaxDays ? values[1] + '+' : values[1]); filterCards(); };
-    daysSliderEl._ranges.minInput.addEventListener('input', ()=> daysSliderEl._rangesCallback([Number(daysSliderEl._ranges.minInput.value), Number(daysSliderEl._ranges.maxInput.value)]));
-    daysSliderEl._ranges.maxInput.addEventListener('input', ()=> daysSliderEl._rangesCallback([Number(daysSliderEl._ranges.minInput.value), Number(daysSliderEl._ranges.maxInput.value)]));
-    // call once to initialize displayed min/max text
-    daysSliderEl._rangesCallback([Number(daysSliderEl._ranges.minInput.value), Number(daysSliderEl._ranges.maxInput.value)]);
+    // update displayed text containers if present
+    if(daysMinEl && daysMaxEl){
+      daysSliderEl._ranges.minInput.addEventListener('input', ()=> daysMinEl.textContent = daysSliderEl._ranges.minInput.value);
+      daysSliderEl._ranges.maxInput.addEventListener('input', ()=> daysMaxEl.textContent = (Number(daysSliderEl._ranges.maxInput.value) >= 14 ? daysSliderEl._ranges.maxInput.value + '+' : daysSliderEl._ranges.maxInput.value));
+      // init
+      daysMinEl.textContent = daysSliderEl._ranges.minInput.value;
+      daysMaxEl.textContent = (Number(daysSliderEl._ranges.maxInput.value) >= 14 ? daysSliderEl._ranges.maxInput.value + '+' : daysSliderEl._ranges.maxInput.value);
+    }
 
-    // create budget slider (green)
-    const budgetObj = createDualRange(budgetSliderEl, {min:0, max:sliderMaxBudget, startMin:0, startMax:sliderMaxBudget, step:1000, fillColor:'#34d399'});
+    // create budget slider (Költség) — use thousands as units (1..500 => display 1k..500k)
+    function fmtK(v){ return (v >= 1000 ? (v/1000)+'k' : (v + '')); }
+    // We'll operate budget slider in 'k' units: min 1, max 500
+    const budgetObj = createDoubleSlider(budgetSliderEl, {min:1, max:500, startMin:1, startMax:500, step:1,
+      format: v => String(v) + 'k', fillColor:'#D9775B', inactiveColor:'#D1D5DB', onChange: ()=>filterCards()});
     budgetSliderEl._ranges = budgetObj;
-    budgetSliderEl._rangesCallback = function(values){ budgetMinEl.textContent = formatNumber(values[0]); budgetMaxEl.textContent = (values[1] >= sliderMaxBudget ? formatNumber(values[1]) + '+' : formatNumber(values[1])); filterCards(); };
-    budgetSliderEl._ranges.minInput.addEventListener('input', ()=> budgetSliderEl._rangesCallback([Number(budgetSliderEl._ranges.minInput.value), Number(budgetSliderEl._ranges.maxInput.value)]));
-    budgetSliderEl._ranges.maxInput.addEventListener('input', ()=> budgetSliderEl._rangesCallback([Number(budgetSliderEl._ranges.minInput.value), Number(budgetSliderEl._ranges.maxInput.value)]));
-    // call once to initialize displayed min/max text
-    budgetSliderEl._rangesCallback([Number(budgetSliderEl._ranges.minInput.value), Number(budgetSliderEl._ranges.maxInput.value)]);
+    if(budgetMinEl && budgetMaxEl){
+      budgetSliderEl._ranges.minInput.addEventListener('input', ()=> budgetMinEl.textContent = String(budgetSliderEl._ranges.minInput.value) + 'k');
+      budgetSliderEl._ranges.maxInput.addEventListener('input', ()=> budgetMaxEl.textContent = (Number(budgetSliderEl._ranges.maxInput.value) >= 500 ? String(budgetSliderEl._ranges.maxInput.value) + 'k+' : String(budgetSliderEl._ranges.maxInput.value) + 'k'));
+      // init
+      budgetMinEl.textContent = String(budgetSliderEl._ranges.minInput.value) + 'k';
+      budgetMaxEl.textContent = (Number(budgetSliderEl._ranges.maxInput.value) >= 500 ? String(budgetSliderEl._ranges.maxInput.value) + 'k+' : String(budgetSliderEl._ranges.maxInput.value) + 'k');
+    }
+
+    // No dynamic label offset calculation needed — layout is handled with flex and fixed track width.
 
     // continent checkboxes already wired above
     countryInput.addEventListener('input', onCountryInput);
@@ -309,11 +283,11 @@ document.addEventListener('DOMContentLoaded', function(){
     // reset sliders
     if(daysSliderEl){
       if(daysSliderEl.noUiSlider){ daysSliderEl.noUiSlider.set([1, sliderMaxDays]); }
-      else if(daysSliderEl._ranges){ daysSliderEl._ranges.minInput.value = 1; daysSliderEl._ranges.maxInput.value = sliderMaxDays; daysMinEl.textContent = 1; daysMaxEl.textContent = sliderMaxDays + '+'; daysSliderEl._ranges.updateFill(); }
+      else if(daysSliderEl._ranges){ daysSliderEl._ranges.minInput.value = 1; daysSliderEl._ranges.maxInput.value = 14; daysSliderEl._ranges.updateFill(); }
     }
     if(budgetSliderEl){
       if(budgetSliderEl.noUiSlider){ budgetSliderEl.noUiSlider.set([0, sliderMaxBudget]); }
-      else if(budgetSliderEl._ranges){ budgetSliderEl._ranges.minInput.value = 0; budgetSliderEl._ranges.maxInput.value = sliderMaxBudget; budgetMinEl.textContent = formatNumber(0); budgetMaxEl.textContent = formatNumber(sliderMaxBudget) + '+'; budgetSliderEl._ranges.updateFill(); }
+      else if(budgetSliderEl._ranges){ budgetSliderEl._ranges.minInput.value = 1; budgetSliderEl._ranges.maxInput.value = 500; budgetSliderEl._ranges.updateFill(); }
     }
     filterCards();
   }
@@ -334,7 +308,12 @@ document.addEventListener('DOMContentLoaded', function(){
     let budgetRange = [0, sliderMaxBudget];
     if(budgetSliderEl){
       if(budgetSliderEl.noUiSlider){ budgetRange = budgetSliderEl.noUiSlider.get().map(v=>Number(v)); }
-      else if(budgetSliderEl._ranges){ budgetRange = [Number(budgetSliderEl._ranges.minInput.value||0), Number(budgetSliderEl._ranges.maxInput.value||sliderMaxBudget)]; }
+      else if(budgetSliderEl._ranges){
+        // budget slider values are in 'k' units (1..500). Convert to full Ft for comparison.
+        const minK = Number(budgetSliderEl._ranges.minInput.value||1);
+        const maxK = Number(budgetSliderEl._ranges.maxInput.value||(sliderMaxBudget/1000));
+        budgetRange = [minK * 1000, maxK * 1000];
+      }
     }
 
     cards.forEach(card => {
